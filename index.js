@@ -31,8 +31,17 @@ const fonts = {
 };
 const printer = new PdfPrinter(fonts);
 
+/**
+ * Example: node .\index.js -s .\input.txt --pdf labels.pdf -p AUR -w 70 --labelwidth 86 --labelheight 88 --margintop 15 --marginleft 10
+ */
+
 cmd
-  .option("-w, --width <width>", "QR code width", 400)
+  .option("-w, --width <width>", "QR code width", 70)
+  .option("--labelwidth <width>", "Label width", 86)
+  .option("--labelheight <height>", "Label height", 88)
+  .option("--labelborder <num>", "Label border yes or no")
+  .option("--marginleft <num>", "Left margin", 10)
+  .option("--margintop <num>", "Top margin", 15)
   .option("-s, --source <path>", "source file", "input.txt")
   .option("-d, --destination <path>", "destination directory", "output")
   .option("--pdf <path-to-pdf>", "PDF file to be generated", "")
@@ -61,24 +70,40 @@ if (!options.pdf) {
   }
 } else {
   const rows = [];
-  const qrsize = 80;
+  const qrsize = parseInt(options.width);
   for (let i = 0; i < texts.length; i += 5) {
     const row = [];
     for (let j = 0; j < 5; j++) {
       if (texts[i + j]) {
         row.push({
           stack: [
-            { qr: texts[i + j], fit: qrsize, alignment: "center" },
-            { text: texts[i + j], alignment: "center", margin: [0, 6, 0, 0] },
+            {
+              qr: options.prefix + texts[i + j],
+              fit: qrsize,
+              alignment: "center",
+              width: qrsize,
+              height: qrsize,
+            },
+            {
+              text: options.prefix + texts[i + j],
+              alignment: "center",
+              margin: [0, 10, 0, 0],
+            },
           ],
         });
       }
     }
     rows.push(row);
   }
-  const cellSize = 80;
+  const cellWidth = parseInt(options.labelwidth);
+  const cellHeight = parseInt(options.labelheight);
   var docDefinition = {
-    pageMargins: [20, 25, 10, 10],
+    pageMargins: [
+      parseInt(options.marginleft),
+      parseInt(options.margintop),
+      0,
+      0,
+    ],
     pageSize: "A4",
     defaultStyle: {
       font: "Helvetica",
@@ -87,7 +112,8 @@ if (!options.pdf) {
       {
         layout: "qrtable",
         table: {
-          widths: [cellSize, cellSize, cellSize, cellSize, cellSize],
+          heights: [cellHeight, cellHeight, cellHeight, cellHeight, cellHeight],
+          widths: [cellWidth, cellWidth, cellWidth, cellWidth, cellWidth],
           body: rows,
         },
       },
@@ -96,6 +122,12 @@ if (!options.pdf) {
   const padding = 15;
   var myTableLayouts = {
     qrtable: {
+      hLineWidth() {
+        return options.labelborder ? 1 : 0;
+      },
+      vLineWidth() {
+        return options.labelborder ? 1 : 0;
+      },
       paddingLeft: function () {
         return padding;
       },
